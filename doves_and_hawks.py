@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import random
 import string
 
@@ -6,8 +7,11 @@ class bird:
     _win       = 50
     _wounds    = -100
     _timewaste = -10
-    _max_age   = 5
-    _ID_length = 6
+    _max_age   = 3
+    _ID_length = 7 
+    _litter_thr1 = 20
+    _litter_thr2 = 50
+    _litter_thr3 = 200
 
     def __init__(self, species):
         ''' bird's characteristics '''
@@ -29,37 +33,39 @@ class bird:
         if self.species == 'hawk' and opponent.species == 'hawk':
             self.HP     += win
             opponent.HP += wounds
-        if self.species == 'hawk' and opponent.species == 'dove':
+        elif self.species == 'hawk' and opponent.species == 'dove':
             self.HP     += win
-        if self.species == 'dove' and opponent.species == 'hawk':
+        elif self.species == 'dove' and opponent.species == 'hawk':
             opponent.HP += win
-        if self.species == 'dove' and opponent.species == 'dove':
+        elif self.species == 'dove' and opponent.species == 'dove':
             self.HP     += win + timewaste
             opponent.HP += timewaste
-        print('duel: {} {}:{:d} vs {} {}:{:d}'.format(self.species, self.ID, self.HP, 
-                                                opponent.species, opponent.ID, opponent.HP))
+        # print('duel: {} {}:{:d} vs {} {}:{:d}'.format(self.species, self.ID, self.HP, 
+                                                # opponent.species, opponent.ID, opponent.HP))
 
     def litter(self):
         ''' litter size, dependant on HP'''
-        if self.HP <= 0:
+        if self.HP <= bird._litter_thr1:
             return 0
-        if self.HP <= 50:
+        if self.HP <= bird._litter_thr2:
             return 1
-        if self.HP <= 100:
+        if self.HP <= bird._litter_thr3:
             return 2
         else:
             return 3
 
 class population:
-    _evolution_time  = 2
+    _evolution_time  = 15 
     # number of duels wrt number of members
     _duels_percentage = 0.5
     ''' class for a population of birds '''
     def __init__(self):
         ''' population composition '''
-        n_doves = 2 
-        n_all   = 5
+        n_doves = 4 
+        n_all   = 10
         self.species = {'dove': 0, 'hawk' : 0, 'all' : 0}
+        # data for the plot
+        self.ratio = []
         species = ['dove', 'hawk']
         self.members = dict()
         for i in range(n_all):
@@ -84,28 +90,32 @@ class population:
 
     def reproduction(self):
         ''' reproduction of individuals depending on their HP '''
-        print('==reproduction===')
+        print('-> reproduction')
         for member in list(self.members.values()):
             litter_size = member.litter()
-            print('{} {} of HP:{:d} has {:d} children'.format(member.species, member.ID, member.HP, litter_size))
+            # print('{} {} of HP:{:d} has {:d} children'.format(member.species, member.ID, member.HP, litter_size))
             for _ in range(litter_size):
                 species = member.species
                 self.add_member(species)
 
     # TODO: add population size limit
     def extinction(self):
-        print('=== extinction ===')
         ''' old and injured members die out, others get older '''
+        print('-> extinction')
+        died = 0
         for member in list(self.members.values()):
             member.age += 1
             if member.HP < 0 or member.age >= member.__class__._max_age:
-                print('extict: {}, HP: {:d}, age: {:d}'.format(member.ID, member.HP, member.age))
+                # print('extict: {}, HP: {:d}, age: {:d}'.format(member.ID, member.HP, member.age))
                 self.remove_member(member.ID, member.species)
+                died += 1
+        print('died: ', died)
 
     def duels(self):
         ''' set up duels between pairs of members '''
         n_duels = int(self.__class__._duels_percentage*self.species['all'])
-        print('==={} duels ==='.format(n_duels))
+        print('-> duels')
+        # print('==={} duels ==='.format(n_duels))
         for _ in range(n_duels):
             player1_ID = random.choice(list(self.members.keys()))
             player2_ID = random.choice(list(self.members.keys()))
@@ -115,7 +125,18 @@ class population:
 
     def update_plots(self):
         ''' update info about the number of each species '''
-        pass
+        self.ratio.append(float(self.species['dove'])/(self.species['hawk']))
+
+    def prepare_plots(self):
+        ''' prepares plots '''
+        plotpath = 'plots/ratio.png'
+        plt.plot(self.ratio, 'mo--', ms=5)
+        plt.xlabel('epochs')
+        plt.ylabel('ratios')
+        plt.text(2, 0.75, 'max_age: {}\nthresholds: {}, {}, {}'.format(bird._max_age, 
+            bird._litter_thr1, bird._litter_thr2, bird._litter_thr3))
+        plt.show()
+        # plt.savefig(plotpath)
 
     def introduce_perturbation(self):
         ''' check if a one-species population is stable '''
@@ -124,22 +145,23 @@ class population:
 
     def print_members(self):
         ''' print members '''
-        print('=== print members ===')
-        print('doves: ', self.species['dove'])
-        print('hawks: ', self.species['hawk'])
-        for member in list(self.members.values()):
-            print(member.ID, member.species, member.HP, member.age)
+        # print('=== print members ===')
+        print('doves: ', self.species['dove'], 'hawks: ', self.species['hawk'])
+        # for member in list(self.members.values()):
+        #     print(member.ID, member.species, member.HP, member.age)
 
     def evolution(self):
         ''' simulates the evolution of the population '''
+        self.update_plots()
         for epoch in range(self.__class__._evolution_time):
-            print('epoch: {}'.format(epoch))
+            print('======== epoch: {} ========'.format(epoch))
             self.print_members()
             self.duels()
             self.extinction()
             self.reproduction()
             self.update_plots()
         self.print_members()
+        self.prepare_plots()
 
 
 def main():
