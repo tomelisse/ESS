@@ -1,3 +1,4 @@
+from __future__ import print_function
 from matplotlib import pyplot as plt
 import random
 import string
@@ -12,6 +13,10 @@ class bird:
     _litter_thr1 = 20
     _litter_thr2 = 50
     _litter_thr3 = 200
+    _duels_rules = {('dove', 'dove'):(_win+_timewaste, _timewaste),
+                   ('dove', 'hawk'):(0, _win),
+                   ('hawk', 'dove'):(_win, 0),
+                   ('hawk', 'hawk'):(_win ,_wounds)}
 
     def __init__(self, species):
         ''' bird's characteristics '''
@@ -27,21 +32,11 @@ class bird:
 
     def duel(self, opponent):
         ''' duel between 2 individuals '''
-        win       = self.__class__._win
-        wounds    = self.__class__._wounds
-        timewaste = self.__class__._timewaste
-        if self.species == 'hawk' and opponent.species == 'hawk':
-            self.HP     += win
-            opponent.HP += wounds
-        elif self.species == 'hawk' and opponent.species == 'dove':
-            self.HP     += win
-        elif self.species == 'dove' and opponent.species == 'hawk':
-            opponent.HP += win
-        elif self.species == 'dove' and opponent.species == 'dove':
-            self.HP     += win + timewaste
-            opponent.HP += timewaste
+        results     = self.__class__._duels_rules[self.species, opponent.species]
+        self.HP     += results[0]
+        opponent.HP += results[1]
         # print('duel: {} {}:{:d} vs {} {}:{:d}'.format(self.species, self.ID, self.HP, 
-                                                # opponent.species, opponent.ID, opponent.HP))
+        #                                         opponent.species, opponent.ID, opponent.HP))
 
     def litter(self):
         ''' litter size, dependant on HP'''
@@ -55,7 +50,7 @@ class bird:
             return 3
 
 class population:
-    _evolution_time  = 15 
+    _evolution_time  = 18
     # number of duels wrt number of members
     _duels_percentage = 0.5
     ''' class for a population of birds '''
@@ -115,13 +110,20 @@ class population:
         ''' set up duels between pairs of members '''
         n_duels = int(self.__class__._duels_percentage*self.species['all'])
         print('-> duels')
-        # print('==={} duels ==='.format(n_duels))
-        for _ in range(n_duels):
-            player1_ID = random.choice(list(self.members.keys()))
-            player2_ID = random.choice(list(self.members.keys()))
+        # print('=== {} duels ==='.format(n_duels))
+        repetitions = 0
+        IDs = list(self.members.keys())
+        for i in range(n_duels):
+            # if i%1000 == 0:
+            #     print('duel {} out of {}'.format(i, n_duels))
+            player1_ID = random.choice(IDs)
+            player2_ID = random.choice(IDs)
             while player2_ID == player1_ID:
-                player2_ID = random.choice(list(self.members.keys()))
+                player2_ID = random.choice(IDs)
+                repetitions += 1
             self.members[player1_ID].duel(self.members[player2_ID])
+        if float(repetitions)/float(n_duels) > 0.01:
+            print('{} repetitions in {} duels'.format(repetitions, n_duels))
 
     def update_plots(self):
         ''' update info about the number of each species '''
