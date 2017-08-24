@@ -9,10 +9,9 @@ class bird:
     _wounds    = -100
     _timewaste = -10
     _max_age   = 3
-    _ID_length = 7 
-    _litter_thr1 = 20
-    _litter_thr2 = 50
-    _litter_thr3 = 200
+    _litter_thr1 = 50
+    _litter_thr2 = 100
+    _litter_thr3 = 150
     _duels_rules = {('dove', 'dove'):(_win+_timewaste, _timewaste),
                    ('dove', 'hawk'):(0, _win),
                    ('hawk', 'dove'):(_win, 0),
@@ -23,12 +22,6 @@ class bird:
         self.species = species
         self.age     = 0
         self.HP      = 50
-        self.ID      = self.generate_ID()
-
-    def generate_ID(self):
-        ''' generates ID for the birs '''
-        return ''.join([random.choice(string.ascii_letters) 
-                        for _ in range(self.__class__._ID_length)])
 
     def duel(self, opponent):
         ''' duel between 2 individuals '''
@@ -40,26 +33,27 @@ class bird:
 
     def litter(self):
         ''' litter size, dependant on HP'''
-        if self.HP <= bird._litter_thr1:
+        if self.HP < bird._litter_thr1:
             return 0
-        if self.HP <= bird._litter_thr2:
+        if self.HP < bird._litter_thr2:
             return 1
-        if self.HP <= bird._litter_thr3:
+        if self.HP < bird._litter_thr3:
             return 2
         else:
             return 3
 
 class population:
-    _evolution_time  = 15
-    _limit = 100000
+    _evolution_time  = 100 
+    _limit = 400000
     # percentage of population perished during mass extinction
-    _extinction_factor = 0.5
+    _extinction_factors = [ 0.6, 0.7, 0.8, 0.9]
     # number of duels wrt number of members
     _duels_percentage = 0.5
+    _ID_length = 7 
     ''' class for a population of birds '''
     def __init__(self):
         ''' population composition '''
-        n_doves = 40 
+        n_doves = 5
         n_all   = 100
         self.species = {'dove': 0, 'hawk' : 0, 'all' : 0}
         # data for the plots
@@ -73,12 +67,18 @@ class population:
             spec = species[index] 
             self.add_member(spec)
 
+    def generate_ID(self):
+        ''' generates ID for the birs '''
+        return ''.join([random.choice(string.ascii_letters) 
+                        for _ in range(self.__class__._ID_length)])
+
     def add_member(self, species):
         ''' adds a new member to the population '''
+        ID = self.generate_ID()
+        while ID in self.members:
+            ID = self.generate_ID()
         member = bird(species)
-        while member.ID in self.members:
-            member = bird(species)
-        self.members[member.ID] = member
+        self.members[ID]       = member
         self.species[species] += 1
         self.species['all'  ] += 1
 
@@ -92,43 +92,52 @@ class population:
     def reproduction(self):
         ''' reproduction of individuals depending on their HP '''
         print('-> reproduction')
-        for member in list(self.members.values()):
+        members = list(self.members.values())
+        for member in members:
             litter_size = member.litter()
             # print('{} {} of HP:{:d} has {:d} children'.format(member.species, member.ID, member.HP, litter_size))
             for _ in range(litter_size):
                 species = member.species
                 self.add_member(species)
 
+
+    def remove_random_member(self, IDs):
+        ''' mass extinction helper '''
+        ID = random.choice(IDs)
+        try: 
+            self.remove_member(ID)
+        except KeyError:
+            self.remove_random_member(IDs)
+
     def mass_extinction(self):
         ''' if population is overcrowded '''
         all_members = self.species['all']
         if all_members > population._limit:
+            self.print_members()
+            extinction_factor = random.choice(population._extinction_factors)
             print('->>> MASS EXTINCTION <<<-')
-            fatalities = int(population._extinction_factor*all_members)
+            print('extinction factor: ', extinction_factor)
+            fatalities = int(extinction_factor*all_members)
             IDs = self.members.keys()
             for _ in range(fatalities):
-                ID = random.choice(IDs)
-                try:
-                    self.remove_member(ID)
-                except KeyError:
-                    IDs = self.members.keys()
-                    ID = random.choice(IDs)
-                    self.remove_member(ID)
-
-
+                # ID = random.choice(self.members.keys())
+                # self.remove_member(ID)
+                self.remove_random_member(IDs)
+            self.print_members()
 
     def extinction(self):
         ''' old and injured members die out, others get older '''
         print('-> extinction')
-        died = 0
+        # died = 0
+        IDs = self.members.keys()
         members = list(self.members.values())
-        for member in list(members):
+        for ID, member in zip(IDs, members):
             member.age += 1
             if member.HP < 0 or member.age >= bird._max_age:
                 # print('extict: {}, HP: {:d}, age: {:d}'.format(member.ID, member.HP, member.age))
-                self.remove_member(member.ID)
-                died += 1
-        print('died: ', died)
+                self.remove_member(ID)
+                # died += 1
+        # print('died: ', died)
 
     def duels(self):
         ''' set up duels between pairs of members '''
@@ -160,16 +169,16 @@ class population:
     def prepare_plots(self):
         ''' prepares plots '''
         plotpath = 'plots/ratio.png'
-        f, (ax1, ax2, ax3) = plt.subplots(3,1)
+        f, (ax1, ax2) = plt.subplots(2,1)
         ax1.plot(self.ratio, 'mo--', ms=5)
         # ax1.xlabel('epochs')
         # ax1.ylabel('ratios')
         ax1.text(2, 0.75, 'max_age: {}\nthresholds: {}, {}, {}'.format(bird._max_age, 
             bird._litter_thr1, bird._litter_thr2, bird._litter_thr3))
-        ax2.plot(self.doves, 'mo--', ms=5)
+        ax2.plot(self.doves, 'o--', ms=5)
         # ax2.xlabel('epochs')
         # ax2.ylabel('doves')
-        ax3.plot(self.hawks, 'mo--', ms=5)
+        ax2.plot(self.hawks, 'yo--', ms=5)
         # ax3.xlabel('epochs')
         # ax3.ylabel('hawks')
         plt.show()
