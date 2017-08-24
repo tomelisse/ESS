@@ -43,17 +43,16 @@ class bird:
             return 3
 
 class population:
-    _evolution_time  = 100 
+    _evolution_time  = 10 
     _limit = 400000
     # percentage of population perished during mass extinction
     _extinction_factors = [ 0.6, 0.7, 0.8, 0.9]
     # number of duels wrt number of members
     _duels_percentage = 0.5
-    _ID_length = 7 
     ''' class for a population of birds '''
     def __init__(self):
         ''' population composition '''
-        n_doves = 5
+        n_doves = 50
         n_all   = 100
         self.species = {'dove': 0, 'hawk' : 0, 'all' : 0}
         # data for the plots
@@ -61,38 +60,31 @@ class population:
         self.doves = []
         self.hawks = []
         species = ['dove', 'hawk']
-        self.members = dict()
+        self.members = []
         for i in range(n_all):
             index = i in range(n_doves, n_all)
             spec = species[index] 
             self.add_member(spec)
 
-    def generate_ID(self):
-        ''' generates ID for the birs '''
-        return ''.join([random.choice(string.ascii_letters) 
-                        for _ in range(self.__class__._ID_length)])
-
     def add_member(self, species):
         ''' adds a new member to the population '''
-        ID = self.generate_ID()
-        while ID in self.members:
-            ID = self.generate_ID()
         member = bird(species)
-        self.members[ID]       = member
+        self.members.append(member)
         self.species[species] += 1
         self.species['all'  ] += 1
 
-    def remove_member(self, ID):
+    def remove_member(self, index):
         ''' remove the given member from the population '''
-        species = self.members[ID].species
-        del self.members[ID]
+        species = self.members[index].species
+        del self.members[index]
         self.species[species] -= 1
         self.species['all']   -= 1
 
     def reproduction(self):
         ''' reproduction of individuals depending on their HP '''
         print('-> reproduction')
-        members = list(self.members.values())
+        # copy the original list
+        members = list(self.members)
         for member in members:
             litter_size = member.litter()
             # print('{} {} of HP:{:d} has {:d} children'.format(member.species, member.ID, member.HP, litter_size))
@@ -100,42 +92,30 @@ class population:
                 species = member.species
                 self.add_member(species)
 
-
-    def remove_random_member(self, IDs):
-        ''' mass extinction helper '''
-        ID = random.choice(IDs)
-        try: 
-            self.remove_member(ID)
-        except KeyError:
-            self.remove_random_member(IDs)
-
     def mass_extinction(self):
         ''' if population is overcrowded '''
-        all_members = self.species['all']
-        if all_members > population._limit:
+        if self.species['all'] > population._limit:
             self.print_members()
             extinction_factor = random.choice(population._extinction_factors)
             print('->>> MASS EXTINCTION <<<-')
             print('extinction factor: ', extinction_factor)
             fatalities = int(extinction_factor*all_members)
-            IDs = self.members.keys()
             for _ in range(fatalities):
-                # ID = random.choice(self.members.keys())
-                # self.remove_member(ID)
-                self.remove_random_member(IDs)
-            self.print_members()
+                index  = random.choice(range(self.species['all']))
+                self.remove_member(index)
 
     def extinction(self):
         ''' old and injured members die out, others get older '''
         print('-> extinction')
         # died = 0
-        IDs = self.members.keys()
-        members = list(self.members.values())
-        for ID, member in zip(IDs, members):
+        members = list(self.members)
+        index = 0
+        for member in members:
             member.age += 1
-            if member.HP < 0 or member.age >= bird._max_age:
-                # print('extict: {}, HP: {:d}, age: {:d}'.format(member.ID, member.HP, member.age))
-                self.remove_member(ID)
+            if member.HP < 0 or member.age == bird._max_age:
+                self.remove_member(index)
+            else:
+                index += 1
                 # died += 1
         # print('died: ', died)
 
@@ -144,19 +124,15 @@ class population:
         n_duels = int(population._duels_percentage*self.species['all'])
         print('-> duels')
         # print('=== {} duels ==='.format(n_duels))
-        repetitions = 0
-        IDs = list(self.members.keys())
+        indices = range(self.species['all'])
         for i in range(n_duels):
             # if i%1000 == 0:
             #     print('duel {} out of {}'.format(i, n_duels))
-            player1_ID = random.choice(IDs)
-            player2_ID = random.choice(IDs)
-            while player2_ID == player1_ID:
-                player2_ID = random.choice(IDs)
-                repetitions += 1
-            self.members[player1_ID].duel(self.members[player2_ID])
-        if float(repetitions)/float(n_duels) > 0.01:
-            print('{} repetitions in {} duels'.format(repetitions, n_duels))
+            player1_index = random.choice(indices)
+            player2_index = random.choice(indices)
+            while player2_index == player1_index:
+                player2_index = random.choice(indices)
+            self.members[player1_index].duel(self.members[player2_index])
 
     def update_plot_data(self):
         ''' update info about the number of each species '''
