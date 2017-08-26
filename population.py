@@ -6,7 +6,7 @@ import string
 
 class Population(object):
     ''' class for a population of birds '''
-    _evolution_time  = 20
+    _evolution_time  = 10
     _limit           = 400000 
     # percentage of population removed during mass extinction
     _extinction_factors = [ 0.6, 0.7, 0.8, 0.9]
@@ -139,17 +139,18 @@ class Population(object):
         ''' prepares plots '''
         plotpath = 'plots/ratio.png'
         f, (ax1, ax2) = plt.subplots(2,1)
+        f.tight_layout()
+        f.set_size_inches(10.5, 10.5)
         ax1.plot(self.ratio, 'mo--', ms=5)
-        # ax0.xlabel('epochs')
-        # ax0.ylabel('ratios')
         ax1.text(2, 0.75, 'max_age: {}\nthresholds: {}, {}, {}'.format(Dove._max_age, 
             Dove._thr1, Dove._thr2, Dove._thr3))
-        ax2.plot(self.doves, 'o--', ms=5)
-        # ax1.xlabel('epochs')
-        # ax1.ylabel('Doves')
-        ax2.plot(self.hawks, 'yo--', ms=5)
-        # ax2.xlabel('epochs')
-        # ax2.ylabel('Hawks')
+        ax1.set_xlabel('epoch')
+        ax1.set_ylabel('ratio')
+        ax2.plot(self.doves, 'o--', ms=5, label = 'doves')
+        ax2.plot(self.hawks, 'yo--', ms=5, label = 'hawks')
+        ax2.set_xlabel('epoch')
+        ax2.set_ylabel('bird count')
+        ax2.legend()
         plt.show()
         # plt.savefig(plotpath)
 
