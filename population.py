@@ -6,24 +6,25 @@ import string
 
 class Population(object):
     ''' class for a population of birds '''
-    _evolution_time  = 10
-    _limit           = 400000 
+    _evolution_time  = 15 
+    _limit           = 10000
     # percentage of population removed during mass extinction
-    _extinction_factors = [ 0.6, 0.7, 0.8, 0.9]
+    _extinction_factors = [0.9]
     # number of duels wrt number of members
     _duels_percentage = 0.5
     _ID_length = 7 
 
-    _win       = 50 
-    _wounds    = -100
-    _timewaste = -10
+    _zero      = 100
+    _win       = _zero + 50 
+    _wounds    = _zero - 100
+    _timewaste = _zero - 10
     _duels_rules = {('Dove', 'Dove'):(_win+_timewaste, _timewaste),
-                    ('Dove', 'Hawk'):(0, _win),
-                    ('Hawk', 'Dove'):(_win, 0),
+                    ('Dove', 'Hawk'):(_zero, _win),
+                    ('Hawk', 'Dove'):(_win, _zero),
                     ('Hawk', 'Hawk'):(_win ,_wounds)}
     def __init__(self):
         ''' Population composition '''
-        n_doves = 50
+        n_doves = 10 
         n_all   = 100
         self.counter = {'Dove': 0, 'Hawk' : 0, 'all' : 0}
         self.bird    = {'Dove':Dove, 'Hawk':Hawk}
@@ -63,15 +64,19 @@ class Population(object):
 
     def reproduction(self):
         ''' reproduction of individuals depending on their HP '''
+        ''' and extinction of old population members if max_age == 1'''
         print('-> reproduction')
         # copy the original list
         members = list(self.members.values())
-        for member in members:
+        IDs = list(self.members.keys())
+        for ID, member in zip(IDs, members):
             litter_size = member.litter()
             # print('{} of HP:{:d} has {:d} children'.format(member.species, member.HP, litter_size))
             for _ in range(litter_size):
                 species = member.__class__.__name__
                 self.add_member(species)
+            if member.__class__._max_age == 1:
+                self.remove_member(ID)
 
     def remove_random_member(self, IDs):
         ''' mass extinction helper '''
@@ -93,13 +98,16 @@ class Population(object):
             for _ in range(fatalities):
                 self.remove_random_member(IDs)
 
+
     def extinction(self):
-        ''' old and injured members die out, others get older '''
-        print('-> extinction')
-        for ID, member in self.members.items():
-            member.age += 1
-            if member.HP < 0 or member.age == member.__class__._max_age:
-                self.remove_member(ID)
+        ''' old and injured members die out '''
+        ''' only used for max_age > 1 '''  
+        if Dove._max_age > 1:
+            print('-> extinction')
+            for ID, member in self.members.items():
+                member.age += 1
+                if member.HP < 0 or member.age == member.__class__._max_age:
+                    self.remove_member(ID)
 
     def duel(self, ID1, ID2):
         ''' duel between 1 individuals '''
@@ -137,21 +145,28 @@ class Population(object):
 
     def prepare_plots(self):
         ''' prepares plots '''
-        plotpath = 'plots/ratio.png'
         f, (ax1, ax2) = plt.subplots(2,1)
         f.tight_layout()
         f.set_size_inches(10.5, 10.5)
         ax1.plot(self.ratio, 'mo--', ms=5)
-        ax1.text(2, 0.75, 'max_age: {}\nthresholds: {}, {}, {}'.format(Dove._max_age, 
-            Dove._thr1, Dove._thr2, Dove._thr3))
+        n = self.__class__._evolution_time - 1
+        initial_ratio = float(self.doves[0])/float(self.hawks[0]) 
+        final_ratio   = float(self.doves[n])/float(self.hawks[n]) 
+        text_pos_y    = float(initial_ratio + final_ratio)/2
+        text_pos_x    = float(n)/2
+        ax1.text(text_pos_x, text_pos_y, 'initial ratio: {}\nfinal ratio : {}'.format(initial_ratio, final_ratio))
+        # ax1.text(text_pos_x, text_pos_y, 'initial doves {} : hawks {}\nmax_age: {}\
+        #          \nthresholds: {}, {}, {}'.format(self.doves[0], self.hawks[0], 
+        #          Dove._max_age, Dove._thr1, Dove._thr2, Dove._thr3))
         ax1.set_xlabel('epoch')
-        ax1.set_ylabel('ratio')
+        ax1.set_ylabel('doves/hawks')
         ax2.plot(self.doves, 'o--', ms=5, label = 'doves')
         ax2.plot(self.hawks, 'yo--', ms=5, label = 'hawks')
         ax2.set_xlabel('epoch')
         ax2.set_ylabel('bird count')
         ax2.legend()
         plt.show()
+        # plotpath = 'plots/ratio.png'
         # plt.savefig(plotpath)
 
     def introduce_perturbation(self):
@@ -172,9 +187,10 @@ class Population(object):
             print('======== epoch: {} ========'.format(epoch))
             self.print_members()
             self.duels()
-            self.extinction()
             self.reproduction()
-            self.mass_extinction()
+            self.extinction()
+            if epoch < Population._evolution_time-1:
+                self.mass_extinction()
             self.update_plot_data()
         self.print_members()
         self.prepare_plots()
