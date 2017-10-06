@@ -9,7 +9,7 @@ class Bird(object):
     def __init__(self):
         ''' bird's characteristics '''
         self.age     = 0
-        self.HP      = 50
+        self.HP      = 100
 
     def litter(self):
         ''' litter size, dependant on HP'''
