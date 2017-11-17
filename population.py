@@ -6,7 +6,7 @@ import string
 
 class Population(object):
     ''' class for a population of birds '''
-    _evolution_time  = 50 
+    _evolution_time  = 5
     _limit           = 50000
     # number of duels wrt number of members
     _duels_percentage = 0.5
@@ -19,10 +19,8 @@ class Population(object):
                     ('Dove', 'Hawk'):(0, _win),
                     ('Hawk', 'Dove'):(_win, 0),
                     ('Hawk', 'Hawk'):(_win ,_wounds)}
-    def __init__(self):
+    def __init__(self, n_doves, n_all):
         ''' Population composition '''
-        n_doves = 10 
-        n_all   = 100
         self.counter = {'Dove': 0, 'Hawk' : 0, 'all' : 0}
         self.bird    = {'Dove':Dove, 'Hawk':Hawk}
         self.members = dict()
@@ -32,6 +30,8 @@ class Population(object):
             spec = species[index] 
             self.add_member(spec)
         # data for the plots
+        self.plotpath = 'plots/'
+        self.name  = str(n_doves) + 'doves_per' + str(n_all) + 'birds'
         self.ratio = []
         self.doves = []
         self.hawks = []
@@ -148,32 +148,31 @@ class Population(object):
 
     def prepare_plots(self):
         ''' prepares plots '''
-        f, (ax1, ax2) = plt.subplots(2,1)
-        f.tight_layout()
-        f.set_size_inches(10.5, 10.5)
-        ax1.plot(self.ratio, 'mo--', ms=5, label = 'ratio')
-        ax1.axhline(y=5./7., color = 'g', label = 'stable ratio')
+        # f, (ax1, ax2) = plt.subplots(2,1)
+        # f.tight_layout()
+        # f.set_size_inches(10.5, 10.5)
+        plt.plot(self.ratio, 'mo--', ms=5, label = 'ratio')
+        plt.axhline(y=5./7., color = 'g', label = 'stable ratio')
         n = self.__class__._evolution_time - 1
         initial_ratio = float(self.doves[0])/float(self.hawks[0]) 
         final_ratio   = float(self.doves[n])/float(self.hawks[n]) 
         text_pos_y    = float(initial_ratio + final_ratio)/2
         text_pos_x    = float(n)/2
-        ax1.text(text_pos_x, text_pos_y, 'initial ratio: {}\nfinal ratio : {}'.format(initial_ratio, final_ratio))
-        ax1.set_xlabel('epoch')
-        # ax1.set_ylabel('doves/hawks')
-        ax1.plot(self.doves, 'o--', ms=5, label = 'doves')
-        ax1.plot(self.hawks, 'yo--', ms=5, label = 'hawks')
-        ax1.set_xlabel('epoch')
-        ax1.set_ylabel('bird count')
-        ax1.legend()
-        ax2.plot(self.doves, self.hawks, 'ko-')
-        ax2.set_xlabel('doves')
-        ax2.set_ylabel('hawks')
-        ax2.set_xlim([0,1])
-        ax2.set_ylim([0,1])
-        plt.show()
-        # plotpath = 'plots/ratio.png'
-        # plt.savefig(plotpath)
+        plt.text(text_pos_x, text_pos_y, 'initial ratio: {}\nfinal ratio : {}'.format(initial_ratio, final_ratio))
+        plt.plot(self.doves, 'o--', ms=5, label = 'doves')
+        plt.plot(self.hawks, 'yo--', ms=5, label = 'hawks')
+        plt.xlabel('epoch')
+        plt.legend()
+        plt.savefig(self.plotpath + self.name + '.png')
+
+        plt.clf()
+        plt.plot(self.doves, self.hawks, 'ko-')
+        plt.xlabel('doves')
+        plt.ylabel('hawks')
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.savefig(self.plotpath + self.name + '2D.png')
+        plt.close()
 
     def introduce_perturbation(self):
         ''' check if a one-species Population is stable '''
@@ -198,5 +197,5 @@ class Population(object):
             self.mass_extinction()
             self.update_plot_data()
         self.print_members()
-        self.prepare_plots()
+        # self.prepare_plots()
 
