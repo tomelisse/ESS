@@ -6,7 +6,7 @@ import string
 
 class Population(object):
     ''' class for a population of birds '''
-    _evolution_time  = 5
+    _evolution_time  = 100
     _limit           = 50000
     # number of duels wrt number of members
     _duels_percentage = 0.5
